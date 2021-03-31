@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package jsgenerate_xormcache.cacher;
+option go_package = "github.com/powerpuffpenguin/xormcache/protocol/cacher";
+
+
+service Cacher {
+    rpc GetIds (GetIdsRequest) returns (GetIdsResponse);
+    rpc GetBean (GetBeanRequest) returns (GetBeanResponse);
+    rpc PutIds (PutIdsRequest) returns (PutIdsResponse);
+    rpc PutBean (PutBeanRequest) returns (PutBeanResponse);
+    rpc DelIds (DelIdsRequest) returns (DelIdsResponse);
+    rpc DelBean (DelBeanRequest) returns (DelBeanResponse);
+    rpc ClearIds (ClearIdsRequest) returns (ClearIdsResponse);
+    rpc ClearBeans (ClearBeansRequest) returns (ClearBeansResponse);
+    rpc Detail (DetailRequest) returns (DetailResponse);
+}
+
+message GetIdsRequest{
+    string tableName = 1;
+    string sql = 2;
+}
+message GetIdsResponse{
+    bytes data = 1;
+}
+message GetBeanRequest{
+    string tableName = 1;
+    string id = 2;
+}
+message GetBeanResponse{
+    bytes data = 1;
+}
+message PutIdsRequest{
+    string tableName = 1;
+    string sql = 2;
+    bytes ids = 3;
+}
+message PutIdsResponse{
+}
+message PutBeanRequest{
+    string tableName = 1;
+    string id = 2;
+    bytes obj = 3;
+}
+message PutBeanResponse{
+}
+message DelIdsRequest{
+    string tableName = 1;
+    string sql = 2; 
+}
+message DelIdsResponse{
+}
+message DelBeanRequest{
+    string tableName = 1;
+    string id = 2;
+}
+message DelBeanResponse{
+}
+message ClearIdsRequest{
+    string tableName = 1;
+}
+message ClearIdsResponse{
+}
+message ClearBeansRequest{
+    string tableName = 1;
+}
+message ClearBeansResponse{
+}
+message DetailRequest{
+
+}
+message DetailResponse{
+    uint32 maxAge = 1;
+    uint32 maxElementSize = 2;
+}
