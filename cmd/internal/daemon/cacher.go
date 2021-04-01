@@ -7,6 +7,7 @@ import (
 	"github.com/powerpuffpenguin/xormcache/cache"
 	"github.com/powerpuffpenguin/xormcache/module"
 	grpc_cacher "github.com/powerpuffpenguin/xormcache/protocol/cacher"
+	"google.golang.org/grpc/codes"
 )
 
 var startAt = time.Now()
@@ -21,23 +22,23 @@ func (s Cacher) GetIds(ctx context.Context, request *grpc_cacher.GetIdsRequest) 
 	cacher := cache.DefaultCacher()
 	val := cacher.GetIds(request.TableName, request.Sql)
 	if val == nil {
-		response = &emptyGetIdsResponse
-	} else {
-		ele := val.(cache.Element)
-		var nothit bool
-		nothit, e = s.ServeMessage(ctx, ele.Modtime, func(nobody bool) error {
-			if nobody {
-				response = &emptyGetIdsResponse
-			} else {
-				response = &grpc_cacher.GetIdsResponse{
-					Data: ele.Data,
-				}
+		e = s.Error(codes.NotFound, `not found`)
+		return
+	}
+	ele := val.(cache.Element)
+	var nothit bool
+	nothit, e = s.ServeMessage(ctx, ele.Modtime, func(nobody bool) error {
+		if nobody {
+			response = &emptyGetIdsResponse
+		} else {
+			response = &grpc_cacher.GetIdsResponse{
+				Data: ele.Data,
 			}
-			return nil
-		})
-		if e == nil && nothit {
-			s.SetHTTPCacheMaxAge(ctx, int(cacher.Expired/time.Second))
 		}
+		return nil
+	})
+	if e == nil && nothit {
+		s.SetHTTPCacheMaxAge(ctx, int(cacher.Expired/time.Second))
 	}
 	return
 }
@@ -48,23 +49,23 @@ func (s Cacher) GetBean(ctx context.Context, request *grpc_cacher.GetBeanRequest
 	cacher := cache.DefaultCacher()
 	val := cacher.GetBean(request.TableName, request.Id)
 	if val == nil {
-		response = &emptyGetBeanResponse
-	} else {
-		ele := val.(cache.Element)
-		var nothit bool
-		nothit, e = s.ServeMessage(ctx, ele.Modtime, func(nobody bool) error {
-			if nobody {
-				response = &emptyGetBeanResponse
-			} else {
-				response = &grpc_cacher.GetBeanResponse{
-					Data: ele.Data,
-				}
+		e = s.Error(codes.NotFound, `not found`)
+		return
+	}
+	ele := val.(cache.Element)
+	var nothit bool
+	nothit, e = s.ServeMessage(ctx, ele.Modtime, func(nobody bool) error {
+		if nobody {
+			response = &emptyGetBeanResponse
+		} else {
+			response = &grpc_cacher.GetBeanResponse{
+				Data: ele.Data,
 			}
-			return nil
-		})
-		if e == nil && nothit {
-			s.SetHTTPCacheMaxAge(ctx, int(cacher.Expired/time.Second))
 		}
+		return nil
+	})
+	if e == nil && nothit {
+		s.SetHTTPCacheMaxAge(ctx, int(cacher.Expired/time.Second))
 	}
 	return
 }

@@ -20,6 +20,7 @@ func (h Helper) Register(router *gin.RouterGroup) {
 
 	ms := []web.IHelper{
 		Other{},
+		Cacher{},
 	}
 	for _, m := range ms {
 		m.Register(r)
