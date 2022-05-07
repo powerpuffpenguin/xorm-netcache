@@ -41,7 +41,13 @@ func (s *Store) Put(key string, value []byte) error {
 }
 
 func (s *Store) Get(key string) ([]byte, error) {
-	return s.opts.read.Get(s.opts.ctx, key).Bytes()
+	b, e := s.opts.read.Get(s.opts.ctx, key).Bytes()
+	if e == redis.Nil {
+		return nil, nil
+	} else if e != nil {
+		return nil, e
+	}
+	return b, nil
 }
 
 func (s *Store) Del(key string) error {
