@@ -6,15 +6,17 @@ import (
 )
 
 var defaultOptions = options{
-	ctx:     context.Background(),
-	timeout: time.Hour,
+	ctx:          context.Background(),
+	timeout:      time.Hour,
+	expireWorker: 5,
 }
 
 type options struct {
-	ctx     context.Context
-	write   Redis
-	read    Redis
-	timeout time.Duration
+	ctx          context.Context
+	write        Redis
+	read         Redis
+	timeout      time.Duration
+	expireWorker int
 }
 
 type Option interface {
@@ -55,5 +57,15 @@ func WithTimeout(duration time.Duration) Option {
 			duration = 0
 		}
 		o.timeout = duration
+	})
+}
+
+// How much to give to the worker to update the expiration time
+func WithExpireWorker(count int) Option {
+	return newFuncOption(func(o *options) {
+		if count < 1 {
+			count = 1
+		}
+		o.expireWorker = count
 	})
 }
