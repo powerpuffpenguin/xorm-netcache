@@ -206,10 +206,11 @@ func (c *Cache) decode(key string, data []byte) (interface{}, error) {
 	if !ok {
 		return nil, errors.New(`unknow type of ` + key)
 	}
-	p := reflect.New(t).Interface()
+	n := reflect.New(t)
+	p := n.Interface()
 	e := c.opts.coder.Decode(data, p)
 	if e != nil {
 		return nil, e
 	}
-	return p, nil
+	return n.Elem().Interface(), nil
 }
