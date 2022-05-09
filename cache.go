@@ -1,17 +1,14 @@
 package xormcache
 
 import (
-	"errors"
-	"reflect"
 	"strings"
-	"sync"
+
+	"github.com/powerpuffpenguin/xormcache/utils"
 )
 
 type Cache struct {
-	opts   *options
-	store  Store
-	keys   map[string]reflect.Type
-	mutext sync.RWMutex
+	opts  *options
+	store Store
 }
 
 func New(store Store, opt ...Option) (c *Cache, e error) {
@@ -22,7 +19,6 @@ func New(store Store, opt ...Option) (c *Cache, e error) {
 	c = &Cache{
 		store: store,
 		opts:  &opts,
-		keys:  make(map[string]reflect.Type),
 	}
 	return
 }
@@ -79,25 +75,18 @@ func (c *Cache) GetIds(tableName, sql string) interface{} {
 	} else if b == nil {
 		return nil
 	}
-	result, e := c.decode(key, b)
-	if e != nil {
-		if c.opts.logger != nil {
-			c.opts.logger.Printf("GetIds(%s,%s) error: %s\n", tableName, sql, e)
-		}
-		return nil
-	}
-	return result
+	return utils.BytesToString(b)
 }
 func (c *Cache) PutIds(tableName, sql string, ids interface{}) {
-	key := c.sqlKey(tableName, sql)
-	value, e := c.encode(key, ids)
-	if e != nil {
+	s, ok := ids.(string)
+	if !ok {
 		if c.opts.logger != nil {
-			c.opts.logger.Printf("PutIds(%s,%s,%v) error: %s\n", tableName, sql, ids, e)
+			c.opts.logger.Printf("PutIds(%s,%s,%v) only supported type string\n", tableName, sql, ids)
 		}
 		return
 	}
-	e = c.store.Put(key, value)
+	key := c.sqlKey(tableName, sql)
+	e := c.store.Put(key, utils.StringToBytes(s))
 	if e != nil {
 		if c.opts.logger != nil {
 			c.opts.logger.Printf("PutIds(%s,%s,%v) error: %s\n", tableName, sql, ids, e)
@@ -127,7 +116,7 @@ func (c *Cache) GetBean(tableName string, id string) interface{} {
 	} else if b == nil {
 		return nil
 	}
-	result, e := c.decode(key, b)
+	result, e := c.opts.coder.Decode(key, b)
 	if e != nil {
 		if c.opts.logger != nil {
 			c.opts.logger.Printf("GetBean(%s,%s) error: %s\n", tableName, id, e)
@@ -138,7 +127,7 @@ func (c *Cache) GetBean(tableName string, id string) interface{} {
 }
 func (c *Cache) PutBean(tableName string, id string, obj interface{}) {
 	key := c.beanKey(tableName, id)
-	value, e := c.encode(key, obj)
+	value, e := c.opts.coder.Encode(key, obj)
 	if e != nil {
 		if c.opts.logger != nil {
 			c.opts.logger.Printf("PutBean(%s,%s,%v) error: %s\n", tableName, id, obj, e)
@@ -183,34 +172,4 @@ func (c *Cache) ClearBeans(tableName string) {
 		}
 		return
 	}
-}
-func (c *Cache) encode(key string, data interface{}) (value []byte, e error) {
-	t := reflect.TypeOf(data)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	c.mutext.Lock()
-	c.keys[key] = t
-	c.mutext.Unlock()
-
-	value, e = c.opts.coder.Encode(data)
-	if e != nil {
-		return
-	}
-	return
-}
-func (c *Cache) decode(key string, data []byte) (interface{}, error) {
-	c.mutext.RLock()
-	t, ok := c.keys[key]
-	c.mutext.RUnlock()
-	if !ok {
-		return nil, errors.New(`unknow type of ` + key)
-	}
-	n := reflect.New(t)
-	p := n.Interface()
-	e := c.opts.coder.Decode(data, p)
-	if e != nil {
-		return nil, e
-	}
-	return n.Elem().Interface(), nil
 }

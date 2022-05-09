@@ -9,7 +9,7 @@ var defaultOptions = options{
 	logger: log.New(os.Stdout, `[cache] `, log.LstdFlags),
 	prefix: `cache`,
 	sep:    `-`,
-	coder:  JsonCoder{},
+	coder:  defaultCoder,
 }
 
 type options struct {
@@ -39,7 +39,7 @@ func newFuncOption(f func(*options)) *funcOption {
 func WithCoder(coder Coder) Option {
 	return newFuncOption(func(o *options) {
 		if coder == nil {
-			o.coder = GobCoder{}
+			o.coder = defaultCoder
 		} else {
 			o.coder = coder
 		}
