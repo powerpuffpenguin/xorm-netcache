@@ -1,10 +1,17 @@
 package xormcache
 
-import "strings"
+import (
+	"errors"
+	"reflect"
+	"strings"
+	"sync"
+)
 
 type Cache struct {
-	opts  *options
-	store Store
+	opts   *options
+	store  Store
+	keys   map[string]reflect.Type
+	mutext sync.RWMutex
 }
 
 func New(store Store, opt ...Option) (c *Cache, e error) {
@@ -15,6 +22,7 @@ func New(store Store, opt ...Option) (c *Cache, e error) {
 	c = &Cache{
 		store: store,
 		opts:  &opts,
+		keys:  make(map[string]reflect.Type),
 	}
 	return
 }
@@ -71,8 +79,7 @@ func (c *Cache) GetIds(tableName, sql string) interface{} {
 	} else if b == nil {
 		return nil
 	}
-	var result interface{}
-	e = c.opts.coder.Decode(b, &result)
+	result, e := c.decode(key, b)
 	if e != nil {
 		if c.opts.logger != nil {
 			c.opts.logger.Printf("GetIds(%s,%s) error: %s\n", tableName, sql, e)
@@ -82,14 +89,14 @@ func (c *Cache) GetIds(tableName, sql string) interface{} {
 	return result
 }
 func (c *Cache) PutIds(tableName, sql string, ids interface{}) {
-	value, e := c.opts.coder.Encode(ids)
+	key := c.sqlKey(tableName, sql)
+	value, e := c.encode(key, ids)
 	if e != nil {
 		if c.opts.logger != nil {
 			c.opts.logger.Printf("PutIds(%s,%s,%v) error: %s\n", tableName, sql, ids, e)
 		}
 		return
 	}
-	key := c.sqlKey(tableName, sql)
 	e = c.store.Put(key, value)
 	if e != nil {
 		if c.opts.logger != nil {
@@ -120,8 +127,7 @@ func (c *Cache) GetBean(tableName string, id string) interface{} {
 	} else if b == nil {
 		return nil
 	}
-	var result interface{}
-	e = c.opts.coder.Decode(b, &result)
+	result, e := c.decode(key, b)
 	if e != nil {
 		if c.opts.logger != nil {
 			c.opts.logger.Printf("GetBean(%s,%s) error: %s\n", tableName, id, e)
@@ -131,14 +137,14 @@ func (c *Cache) GetBean(tableName string, id string) interface{} {
 	return result
 }
 func (c *Cache) PutBean(tableName string, id string, obj interface{}) {
-	value, e := c.opts.coder.Encode(obj)
+	key := c.beanKey(tableName, id)
+	value, e := c.encode(key, obj)
 	if e != nil {
 		if c.opts.logger != nil {
 			c.opts.logger.Printf("PutBean(%s,%s,%v) error: %s\n", tableName, id, obj, e)
 		}
 		return
 	}
-	key := c.beanKey(tableName, id)
 	e = c.store.Put(key, value)
 	if e != nil {
 		if c.opts.logger != nil {
@@ -177,4 +183,33 @@ func (c *Cache) ClearBeans(tableName string) {
 		}
 		return
 	}
+}
+func (c *Cache) encode(key string, data interface{}) (value []byte, e error) {
+	t := reflect.TypeOf(data)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	c.mutext.Lock()
+	c.keys[key] = t
+	c.mutext.Unlock()
+
+	value, e = c.opts.coder.Encode(data)
+	if e != nil {
+		return
+	}
+	return
+}
+func (c *Cache) decode(key string, data []byte) (interface{}, error) {
+	c.mutext.RLock()
+	t, ok := c.keys[key]
+	c.mutext.RUnlock()
+	if !ok {
+		return nil, errors.New(`unknow type of ` + key)
+	}
+	p := reflect.New(t).Interface()
+	e := c.opts.coder.Decode(data, p)
+	if e != nil {
+		return nil, e
+	}
+	return p, nil
 }
