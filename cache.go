@@ -68,6 +68,8 @@ func (c *Cache) GetIds(tableName, sql string) interface{} {
 			c.opts.logger.Printf("GetIds(%s,%s) error: %s\n", tableName, sql, e)
 		}
 		return nil
+	} else if b == nil {
+		return nil
 	}
 	var result interface{}
 	e = c.opts.coder.Decode(b, &result)
@@ -114,6 +116,8 @@ func (c *Cache) GetBean(tableName string, id string) interface{} {
 		if c.opts.logger != nil {
 			c.opts.logger.Printf("GetBean(%s,%s) error: %s\n", tableName, id, e)
 		}
+		return nil
+	} else if b == nil {
 		return nil
 	}
 	var result interface{}

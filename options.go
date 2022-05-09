@@ -9,7 +9,7 @@ var defaultOptions = options{
 	logger: log.New(os.Stdout, `[cache] `, log.LstdFlags),
 	prefix: `cache`,
 	sep:    `-`,
-	coder:  GobCoder{},
+	coder:  JsonCoder{},
 }
 
 type options struct {
