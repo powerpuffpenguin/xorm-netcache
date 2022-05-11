@@ -113,7 +113,7 @@ func (c *Cache) GetBean(tableName string, id string) interface{} {
 			c.opts.logger.Printf("GetBean(%s,%s) error: %s\n", tableName, id, e)
 		}
 		return nil
-	} else if b == nil {
+	} else if len(b) == 0 {
 		return nil
 	}
 	result, e := c.opts.coder.Decode(key, b)
@@ -132,6 +132,8 @@ func (c *Cache) PutBean(tableName string, id string, obj interface{}) {
 		if c.opts.logger != nil {
 			c.opts.logger.Printf("PutBean(%s,%s,%v) error: %s\n", tableName, id, obj, e)
 		}
+		return
+	} else if len(value) == 0 {
 		return
 	}
 	e = c.store.Put(key, value)
