@@ -17,7 +17,7 @@ type BinaryCoder struct {
 	types map[uint32]BinaryDecoder
 }
 
-func NewBinaryCoder() Coder {
+func NewBinaryCoder() *BinaryCoder {
 	return &BinaryCoder{
 		types: make(map[uint32]BinaryDecoder),
 	}
